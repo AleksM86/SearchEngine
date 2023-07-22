@@ -57,7 +57,7 @@ public class SnippetFactoryService implements Runnable {
         content = Jsoup.parse(content).text();
         //Если поиск по полный фразе дал результат, сохраняем результат, переходим к следующей странице
         String snippet = searchByTheSearchableText(content);
-        if (!(snippet == "")) {
+        if (!(snippet.equals(""))) {
             snippet = cutSnippet(snippet);
             FoundSearchableText foundSearchableText = createFoundSearchableText(siteEntity.getUrl(), siteEntity.getName(),
                     path, title, snippet, (1000 * snippet.length()));
