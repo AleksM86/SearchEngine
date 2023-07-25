@@ -3,7 +3,6 @@ package searchengine.model;
 import com.sun.istack.NotNull;
 import lombok.Getter;
 import lombok.Setter;
-
 import javax.persistence.*;
 
 @Entity
@@ -34,14 +33,11 @@ public class PageEntity {
     @Column(columnDefinition = "mediumtext CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci")
     private String content;
 
-    public PageEntity() {
-
-    }
-
     public PageEntity(int siteId, String path, int code, String content) {
         this.siteId = siteId;
         this.path = path;
         this.code = code;
         this.content = content;
     }
+    public PageEntity(){}
 }

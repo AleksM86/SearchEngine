@@ -16,7 +16,6 @@ public class LemmaFinderService {
         this.luceneMorphology = luceneMorphology;
     }
     private LemmaFinderService(){
-       // throw new RuntimeException("Disallow construct");
         LuceneMorphology morphology= null;
         try {
             morphology = new RussianLuceneMorphology();

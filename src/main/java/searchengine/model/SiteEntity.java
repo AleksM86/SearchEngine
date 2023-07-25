@@ -4,7 +4,6 @@ import com.sun.istack.NotNull;
 import lombok.Getter;
 import lombok.Setter;
 import searchengine.dto.statistics.SiteStatus;
-
 import javax.persistence.*;
 import java.time.LocalDateTime;
 

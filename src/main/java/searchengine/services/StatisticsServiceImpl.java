@@ -9,15 +9,11 @@ import searchengine.dto.statistics.DetailedStatisticsItem;
 import searchengine.dto.statistics.StatisticsData;
 import searchengine.dto.statistics.StatisticsResponse;
 import searchengine.dto.statistics.TotalStatistics;
-import searchengine.interfases.services.StatisticsService;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
-import searchengine.springDataRepositorys.IndexJpaRepository;
-import searchengine.springDataRepositorys.PageJpaRepository;
-import searchengine.springDataRepositorys.SiteJpaRepository;
-import javax.persistence.EntityManager;
-import javax.persistence.PersistenceContext;
-import java.math.BigInteger;
+import searchengine.repository.IndexRepository;
+import searchengine.repository.PageRepository;
+import searchengine.repository.SiteRepository;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -28,11 +24,11 @@ import java.util.List;
 @Getter
 public class StatisticsServiceImpl implements StatisticsService {
     @Autowired
-    private SiteJpaRepository siteJpaRepository;
+    private SiteRepository siteRepository;
     @Autowired
-    private PageJpaRepository pageJpaRepository;
+    private PageRepository pageRepository;
     @Autowired
-    private IndexJpaRepository indexJpaRepository;
+    private IndexRepository indexRepository;
     private static TotalStatistics total = new TotalStatistics();
     private  List<DetailedStatisticsItem> detailed = new ArrayList<>();
     private StatisticsResponse response = new StatisticsResponse();
@@ -41,7 +37,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Override
     public StatisticsResponse getStatistics() {
         detailed.clear();
-        List<SiteEntity> siteEntityList = siteJpaRepository.findAll();
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
         total.setSites(siteEntityList.size());
         data.setTotal(total);
         for (SiteEntity siteEntity : siteEntityList){
@@ -78,10 +74,10 @@ public class StatisticsServiceImpl implements StatisticsService {
         } else {
             detailedStatisticsItem.setError(siteEntity.getLastError());
         }
-        List<PageEntity> pageEntityList = pageJpaRepository.findBySiteEntity(siteEntity);
+        List<PageEntity> pageEntityList = pageRepository.findBySiteEntity(siteEntity);
         int pageCount = pageEntityList.size();
         detailedStatisticsItem.setPages(pageCount);
-        int lemmaCount = indexJpaRepository.findCountIndexBySiteId(siteEntity.getId());
+        int lemmaCount = indexRepository.findCountIndexBySiteId(siteEntity.getId());
         detailedStatisticsItem.setLemmas(lemmaCount);
         detailed.add(detailedStatisticsItem);
     }

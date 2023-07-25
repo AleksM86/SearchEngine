@@ -7,10 +7,9 @@ import searchengine.config.Site;
 import searchengine.dto.statistics.IndexingResponse;
 import searchengine.dto.statistics.SearchResponse;
 import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.interfases.services.IndexPageService;
-import searchengine.interfases.services.IndexingService;
-import searchengine.interfases.services.SearchService;
-import searchengine.interfases.services.StatisticsService;
+import searchengine.services.IndexingService;
+import searchengine.services.SearchService;
+import searchengine.services.StatisticsService;
 
 @RestController
 @RequestMapping("/api")
@@ -49,7 +48,7 @@ public class ApiController {
 
     @PostMapping("/indexPage")
     public ResponseEntity<IndexingResponse> indexPage(Site site) {
-        return ResponseEntity.ok(indexPageService.indexPage(site));
+        return ResponseEntity.ok(indexingService.indexPage(site));
     }
 
     @GetMapping("/search")
