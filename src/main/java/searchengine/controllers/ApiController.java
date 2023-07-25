@@ -18,16 +18,12 @@ public class ApiController {
     private final StatisticsService statisticsService;
     private final IndexingService indexingService;
     private final SearchService searchService;
-    private final IndexPageService indexPageService;
 
-
-    public ApiController(StatisticsService statisticsService, IndexingService indexingService, SearchService searchService,
-                         IndexPageService indexPageService) {
+    public ApiController(StatisticsService statisticsService, IndexingService indexingService, SearchService searchService) {
 
         this.statisticsService = statisticsService;
         this.indexingService = indexingService;
         this.searchService = searchService;
-        this.indexPageService = indexPageService;
     }
 
     @GetMapping("/statistics")
