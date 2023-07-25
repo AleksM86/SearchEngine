@@ -1,0 +1,25 @@
+# example values
+indexing-settings:
+  sites:
+    #    - url: https://www.lenta.ru
+    #      name: Лента.ру
+    #    - url: https://www.skillbox.ru
+    #      name: Skillbox
+    - url: https://volochek.life
+      name: Volochek
+#    - url: https://www.playback.ru
+#      name: PlayBack.Ru
+    - url : https://et-cetera.ru
+      name : Театр Cetera
+    - url : https://www.svetlovka.ru
+      name: Svetlovka
+
+# connect to MySQL
+server.port: 8080
+spring.datasource.url: jdbc:mysql://localhost:3306/search_engine?useSSL=false&requireSSL=false&allowPublicKeyRetrieval=true
+spring.datasource.username: root
+spring.datasource.password: renita2010
+spring.jpa.properties.hibernate.dialect: org.hibernate.dialect.MySQL8Dialect
+spring.jpa.hibernate.ddl-auto: update
+spring.jpa.hibernate.show-sql: true
+
