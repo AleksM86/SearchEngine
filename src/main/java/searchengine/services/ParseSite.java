@@ -21,24 +21,38 @@ import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.RecursiveAction;
 
 public class ParseSite extends RecursiveAction {
-    private static SiteRepository siteRepository;
-    private static PageRepository pageRepository;
-    private static LemmaRepository lemmaRepository;
-    private static IndexRepository indexRepository;
-    private static LemmaFinderService lemmaFinderService;
+    private SiteRepository siteRepository;
+    private PageRepository pageRepository;
+    private LemmaRepository lemmaRepository;
+    private IndexRepository indexRepository;
+    private LemmaFinderService lemmaFinderService;
     private String url;
     private SiteEntity siteEntity;
     private ForkJoinPool fjp;
     private static volatile Boolean isStop;
 
-    public ParseSite(SiteEntity siteEntity) {
+    public ParseSite(SiteEntity siteEntity, SiteRepository siteRepository,
+                     PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository,
+                     LemmaFinderService lemmaFinderService) {
         this.siteEntity = siteEntity;
+        this.siteRepository = siteRepository;
+        this.pageRepository = pageRepository;
+        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
+        this.lemmaFinderService = lemmaFinderService;
     }
 
-    public ParseSite(String urlNext, SiteEntity siteEntity, ForkJoinPool fjp) {
+    public ParseSite(String urlNext, SiteEntity siteEntity, ForkJoinPool fjp, SiteRepository siteRepository,
+                     PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository,
+                     LemmaFinderService lemmaFinderService) {
         this.url = urlNext;
         this.siteEntity = siteEntity;
         this.fjp = fjp;
+        this.siteRepository = siteRepository;
+        this.pageRepository = pageRepository;
+        this.lemmaRepository = lemmaRepository;
+        this.indexRepository = indexRepository;
+        this.lemmaFinderService = lemmaFinderService;
     }
 
     @Override
@@ -49,7 +63,7 @@ public class ParseSite extends RecursiveAction {
             chekParsingFinish();
             return;
         }
-        //Убираем из ссылки название сайта, убираем :443 если есть для исключения одиникого контента в таблице
+        //Убираем из ссылки название сайта, убираем :443 если есть для исключения одинакого контента в таблице
         String path = url.equals(siteEntity.getUrl()) ? "" : url.split(siteEntity.getUrl())[1];
         path = path.replaceAll(":443", "");
         sleeping(150);
@@ -96,7 +110,6 @@ public class ParseSite extends RecursiveAction {
         }
     }
 
-    //Добавление лемм со страницы в таблицу, метод выполняется в одном потоке
     private void addToLemmaTable(PageEntity pageEntity) {
         Map<String, Integer> lemmas = lemmaFinderService.collectLemmas(pageEntity.getContent());
         List<LemmaEntity> lemmaEntityListForSave = new ArrayList<>();
@@ -176,7 +189,8 @@ public class ParseSite extends RecursiveAction {
         for (Element element : document.select("a")) {
             String urlNext = element.absUrl("href");
             urlNext = urlNext.replaceFirst("www\\.", "").strip();
-            new ParseSite(urlNext, siteEntity, fjp).fork();
+            new ParseSite(urlNext, siteEntity, fjp, siteRepository, pageRepository,
+                     lemmaRepository, indexRepository, lemmaFinderService).fork();
         }
     }
 
@@ -193,13 +207,4 @@ public class ParseSite extends RecursiveAction {
         return false;
     }
 
-    protected static  void createStaticRepository(SiteRepository siteRepository, PageRepository pageRepository,
-                                                  LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                                                  LemmaFinderService lemmaFinderService){
-        ParseSite.siteRepository = siteRepository;
-        ParseSite.pageRepository = pageRepository;
-        ParseSite.lemmaRepository = lemmaRepository;
-        ParseSite.indexRepository = indexRepository;
-        ParseSite.lemmaFinderService = lemmaFinderService;
-    }
 }

@@ -6,6 +6,7 @@ import searchengine.dto.statistics.SearchResponse;
 import searchengine.model.LemmaEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.IndexRepository;
+import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import java.util.List;
 import java.util.Map;
@@ -13,9 +14,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class SnippetFactory implements Runnable {
-    private static PageRepository pageRepository;
-    private static IndexRepository indexRepository;
-    private static LemmaFinderService lemmaFinderService;
+    private PageRepository pageRepository;
+    private IndexRepository indexRepository;
+    private LemmaFinderService lemmaFinderService;
     private List<LemmaEntity> searchLemmasList;
     private String searchableText;
     private String path;
@@ -23,12 +24,17 @@ public class SnippetFactory implements Runnable {
     private SearchResponse searchResponse;
 
     public SnippetFactory(String path, List<LemmaEntity> searchLemmasList,
-                          SiteEntity siteEntity, String searchableText, SearchResponse searchResponse) {
+                          SiteEntity siteEntity, String searchableText, SearchResponse searchResponse,
+                          PageRepository pageRepository, IndexRepository indexRepository,
+                          LemmaFinderService lemmaFinderService) {
         this.searchLemmasList = searchLemmasList;
         this.searchableText = searchableText;
         this.path = path;
         this.siteEntity = siteEntity;
         this.searchResponse = searchResponse;
+        this.pageRepository = pageRepository;
+        this.indexRepository = indexRepository;
+        this.lemmaFinderService = lemmaFinderService;
     }
 
     @Override
@@ -151,12 +157,5 @@ public class SnippetFactory implements Runnable {
             }
         }
         return snippet;
-    }
-
-    protected static void createStaticRepository(PageRepository pageRepository, IndexRepository indexRepository,
-                                                 LemmaFinderService lemmaFinderService) {
-        SnippetFactory.pageRepository = pageRepository;
-        SnippetFactory.indexRepository = indexRepository;
-        SnippetFactory.lemmaFinderService = lemmaFinderService;
     }
 }

@@ -72,7 +72,6 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void indexing(List<Site> sites) {
         ParseSite.isStartParse();
-        ParseSite.createStaticRepository(siteRepository,pageRepository,lemmaRepository,indexRepository,lemmaFinderService);
         //Для каждого сайта создаем сущность, записываем ее в таблицу и отправляем сайт на парсинг
         for (Site site : sites) {
             ForkJoinPool fjp = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
@@ -85,7 +84,8 @@ public class IndexingServiceImpl implements IndexingService {
                 siteEntity.setSiteStatus(SiteStatus.INDEXING);
                 siteEntitySet.add(siteEntity);
                 StatisticsServiceImpl.getTotal().setIndexing(true);
-                ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp);
+                ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp, siteRepository,
+                        pageRepository, lemmaRepository, indexRepository, lemmaFinderService);
                 fjp.execute(parseSite);
             }
             catch (Exception e) {
@@ -142,7 +142,6 @@ public class IndexingServiceImpl implements IndexingService {
     }
     @Override
     public IndexingResponse indexPage(Site siteParam) {
-        ParseSite.createStaticRepository(siteRepository,pageRepository,lemmaRepository,indexRepository,lemmaFinderService);
         indexingResponse = new IndexingResponse();
         indexingResponse.setResult(false);
         indexingResponse.setError("Данная страница сайтов находится за пределами сайтов, указанных в конфигурационном файле");
@@ -168,7 +167,8 @@ public class IndexingServiceImpl implements IndexingService {
         }
         //Отправляем страницу на индексацию
 
-        ParseSite parseSite = new ParseSite(siteEntity);
+        ParseSite parseSite = new ParseSite(siteEntity, siteRepository, pageRepository, lemmaRepository,
+                indexRepository, lemmaFinderService);
         parseSite.addToPageTable(pageEntity);
         siteEntity.setSiteStatus(SiteStatus.INDEXED);
         siteRepository.save(siteEntity);

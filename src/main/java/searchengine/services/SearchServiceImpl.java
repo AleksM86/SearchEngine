@@ -56,7 +56,6 @@ public class SearchServiceImpl implements SearchService {
             }
         }
         //Запускаем поиск по сфомированному списку сайтов
-        SnippetFactory.createStaticRepository(pageRepository,indexRepository,lemmaFinderService);
         searchInSiteEntityList(siteEntityList);
         calculatingRelativeRelevance(searchResponse.getData());
         sortData(searchResponse.getData());
@@ -138,7 +137,8 @@ public class SearchServiceImpl implements SearchService {
         ExecutorService executorService = Executors.newWorkStealingPool();
         //Обект с результатами поиска создается в классе SnippetFactory
         for (String path : sortedPathList) {
-            SnippetFactory task = new SnippetFactory(path, searchLemmasList, siteEntity, searchableText, searchResponse);
+            SnippetFactory task = new SnippetFactory(path, searchLemmasList, siteEntity, searchableText, searchResponse,
+                    pageRepository, indexRepository, lemmaFinderService);
             executorService.execute(task);
         }
         executorService.shutdown();
