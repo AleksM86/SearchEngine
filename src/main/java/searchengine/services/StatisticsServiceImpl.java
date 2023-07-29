@@ -17,7 +17,6 @@ import searchengine.repository.SiteRepository;
 import java.util.ArrayList;
 import java.util.List;
 
-
 @Service
 @RequiredArgsConstructor
 @Setter

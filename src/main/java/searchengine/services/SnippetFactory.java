@@ -6,8 +6,9 @@ import searchengine.dto.statistics.SearchResponse;
 import searchengine.model.LemmaEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.IndexRepository;
-import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -22,6 +23,9 @@ public class SnippetFactory implements Runnable {
     private String path;
     private SiteEntity siteEntity;
     private SearchResponse searchResponse;
+    private String title;
+    private String content;
+    private List<String> snippetList = new ArrayList<>();
 
     public SnippetFactory(String path, List<LemmaEntity> searchLemmasList,
                           SiteEntity siteEntity, String searchableText, SearchResponse searchResponse,
@@ -39,33 +43,26 @@ public class SnippetFactory implements Runnable {
 
     @Override
     public void run() {
-        String content = pageRepository.findContentByPathAndSiteId(path, siteEntity.getId());
-        String title = Jsoup.parse(content).title();
+        content = pageRepository.findContentByPathAndSiteId(path, siteEntity.getId());
+        title = Jsoup.parse(content).title();
         content = Jsoup.parse(content).text();
-        //Если поиск по полный фразе дал результат, сохраняем результат, переходим к следующей странице
-        String snippet = searchByTheSearchableText(content);
-        if (!(snippet.equals(""))) {
-            snippet = cutSnippet(snippet);
-            FoundSearchableText foundSearchableText = createFoundSearchableText(siteEntity.getUrl(), siteEntity.getName(),
-                    path, title, snippet, (1000 * snippet.length()));
-            searchResponse.getData().add(foundSearchableText);
-            return;
-        }
-        //Если поиск по искомому тексту не дал результата ищем по леммам и сохраняем найденные результаты
-        snippet = "";
+        //Поиск по полной фразе
+        searchByTheSearchableText();
+        //Если поиск дал результаты пеерходим к следующей страницы
+        if(!snippetList.isEmpty()) return;
+        //Вычисление абсолютной реелвантности страницы
         double relevanceAbsolute = 0;
         for (LemmaEntity lemmaEntity : searchLemmasList) {
             int rank = indexRepository.findContentByLemmaIdAndPageId(lemmaEntity.getLemma(), path, siteEntity.getId());
             relevanceAbsolute = relevanceAbsolute + rank;
-            snippet = snippet + searchSnippet(content, lemmaEntity);
-            snippet = cutSnippet(snippet);
         }
-        FoundSearchableText foundSearchableText = createFoundSearchableText(siteEntity.getUrl(),
-                siteEntity.getName(), path, title, snippet, relevanceAbsolute);
-        searchResponse.getData().add(foundSearchableText);
+        //Поиск по леммам
+        for (LemmaEntity lemmaEntity : searchLemmasList) {
+            searchSnippet(lemmaEntity, relevanceAbsolute);
+        }
     }
 
-    private String searchSnippet(String content, LemmaEntity lemmaEntity) {
+    private void searchSnippet(LemmaEntity lemmaEntity, double relevanceAbsolute) {
         Map<String, Integer> wordLemmaMap;
         String[] arrayWords = content.split("\\s");
         String snippet = "";
@@ -79,21 +76,18 @@ public class SnippetFactory implements Runnable {
                 //если лемма слова равна искомой лемме находим ее в контенте, и все найденные результаты
                 //сохраняем в snippet, разделяя многоточием
                 if (lemma.equals(lemmaEntity.getLemma())) {
-                    snippet = createSnippetByLemma(word, content);
+                    createSnippetByLemma(word, relevanceAbsolute);
                 }
             }
         }
-        return snippet;
     }
 
-    private String searchByTheSearchableText(String content) {
-        String snippet = "";
+    private void searchByTheSearchableText() {
         //Проверяем содержит ли страница искомый текст
         if (Pattern.compile("\\b" + searchableText + "\\b", Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).
                 matcher(content).find()) {
-            snippet = createSnippetBySearchableText(searchableText, content);
+            createSnippetBySearchableText();
         }
-        return snippet;
     }
 
     private FoundSearchableText createFoundSearchableText(String site, String siteName, String uri,
@@ -108,34 +102,25 @@ public class SnippetFactory implements Runnable {
         return foundSearchableText;
     }
 
-    private String cutSnippet(String snippet) {
-        //Если snippet длинее более 300 символов, обрезаем его до 300 символов
-        if (snippet.length() > 300) {
-            String deleteSnippet = snippet.substring(299);
-            snippet = snippet.replaceAll(Pattern.quote(deleteSnippet), "") + "...";
-            return snippet;
-        }
-        return snippet;
-    }
-
-    private String createSnippetByLemma(String word, String content) {
-        String snippet = "";
-        Pattern pattern = Pattern.compile("\\b.{0,15}\\b" + word + "\\b.{0,30}\\b",
+    private void createSnippetByLemma(String word, double relevanceAbsolute) {
+        Pattern pattern = Pattern.compile("\\b.{0,60}\\b" + word + "\\b.{0,100}\\b",
                 Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         Matcher matcher = pattern.matcher(content);
         while (matcher.find()) {
             int start = matcher.start();
             int end = matcher.end();
             String text = "..." + content.substring(start, end) + "... ";
-            text = text.replaceAll(word, "<b>" + word + "</b>");
-            if (snippet.contains(text)) continue;
-            snippet = snippet + text;
+            text = Pattern.compile(word, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).
+                    matcher(text).replaceAll("<b>" + word + "</b>");
+            if (snippetList.contains(text)) continue;
+            FoundSearchableText foundSearchableText = createFoundSearchableText(siteEntity.getUrl(), siteEntity.getName(),
+                    path, title, text, relevanceAbsolute);
+            searchResponse.getData().add(foundSearchableText);
+            snippetList.add(text);
         }
-        return snippet;
     }
 
-    private String createSnippetBySearchableText(String searchableText, String content) {
-        String snippet = "";
+    private void createSnippetBySearchableText() {
         Pattern pattern1 = Pattern.compile(searchableText, Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
         Matcher matcher1 = pattern1.matcher(content);
         String searchableFromContent = "";
@@ -143,7 +128,7 @@ public class SnippetFactory implements Runnable {
             //определяем нахождение искомого текста в тексте страницы
             searchableFromContent = content.substring(matcher1.start(), matcher1.end());
             //находим искомый текст с частью текста слева и справа, согласно шаблону и сохраняем в snippet
-            Pattern pattern2 = Pattern.compile("\\b.{0,15}\\b" + searchableFromContent + "\\b.{0,30}\\b",
+            Pattern pattern2 = Pattern.compile("\\b.{0,60}\\b" + searchableFromContent + "\\b.{0,100}\\b",
                     Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
             Matcher matcher2 = pattern2.matcher(content);
             while (matcher2.find()) {
@@ -152,10 +137,12 @@ public class SnippetFactory implements Runnable {
                 String text = "..." + content.substring(start, end) + "... ";
                 text = Pattern.compile(searchableText, Pattern.LITERAL | Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE).
                         matcher(text).replaceAll("<b>" + searchableFromContent + "</b>");
-                if (snippet.contains(text)) continue;
-                snippet = snippet + text;
+                if (snippetList.contains(text)) continue;
+                FoundSearchableText foundSearchableText = createFoundSearchableText(siteEntity.getUrl(), siteEntity.getName(),
+                        path, title, text, 1000);
+                searchResponse.getData().add(foundSearchableText);
+                snippetList.add(text);
             }
         }
-        return snippet;
     }
 }

@@ -190,7 +190,7 @@ public class ParseSite extends RecursiveAction {
             String urlNext = element.absUrl("href");
             urlNext = urlNext.replaceFirst("www\\.", "").strip();
             new ParseSite(urlNext, siteEntity, fjp, siteRepository, pageRepository,
-                     lemmaRepository, indexRepository, lemmaFinderService).fork();
+                    lemmaRepository, indexRepository, lemmaFinderService).fork();
         }
     }
 

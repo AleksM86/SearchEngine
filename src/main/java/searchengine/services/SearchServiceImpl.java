@@ -98,11 +98,14 @@ public class SearchServiceImpl implements SearchService {
             try {
                 lemmaEntity = lemmaRepository.findByLemmaAndSiteId(searchLemma, siteEntity.getId()).get(0);
             } catch (IndexOutOfBoundsException e) {
-                continue;
+                System.out.println(searchLemma + " отсутсвует на сайте " + siteEntity.getName());
+               continue;
             }
             int countSearchLemmas = indexRepository.findCountIndexByLemmaId(lemmaEntity.getId());
-            if (countSearchLemmas == 0 || ((double) countSearchLemmas / (double) countPages > 0.7)) {
-                continue;
+            if ((double) countSearchLemmas / (double) countPages > 0.9) {
+                System.out.println(searchLemma + " встречается слишком часто - " +
+                        (double) countSearchLemmas / (double) countPages);
+               continue;
             }
             lemmaEntityList.add(lemmaEntity);
         }
