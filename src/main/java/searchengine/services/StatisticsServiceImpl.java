@@ -1,5 +1,6 @@
 package searchengine.services;
 
+import lombok.Data;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
@@ -19,8 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Setter
-@Getter
+@Data
 public class StatisticsServiceImpl implements StatisticsService {
     @Autowired
     private SiteRepository siteRepository;
@@ -28,7 +28,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     private PageRepository pageRepository;
     @Autowired
     private IndexRepository indexRepository;
-    private static TotalStatistics total = new TotalStatistics();
+    private TotalStatistics total = new TotalStatistics();
     private  List<DetailedStatisticsItem> detailed = new ArrayList<>();
     private StatisticsResponse response = new StatisticsResponse();
     private StatisticsData data = new StatisticsData();
@@ -79,8 +79,5 @@ public class StatisticsServiceImpl implements StatisticsService {
         int lemmaCount = indexRepository.findCountIndexBySiteId(siteEntity.getId());
         detailedStatisticsItem.setLemmas(lemmaCount);
         detailed.add(detailedStatisticsItem);
-    }
-    public static TotalStatistics getTotal() {
-        return total;
     }
 }

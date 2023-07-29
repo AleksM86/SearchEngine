@@ -26,6 +26,7 @@ public class ParseSite extends RecursiveAction {
     private LemmaRepository lemmaRepository;
     private IndexRepository indexRepository;
     private LemmaFinderService lemmaFinderService;
+    private StatisticsServiceImpl statisticsServiceImpl;
     private String url;
     private SiteEntity siteEntity;
     private ForkJoinPool fjp;
@@ -44,7 +45,7 @@ public class ParseSite extends RecursiveAction {
 
     public ParseSite(String urlNext, SiteEntity siteEntity, ForkJoinPool fjp, SiteRepository siteRepository,
                      PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                     LemmaFinderService lemmaFinderService) {
+                     LemmaFinderService lemmaFinderService, StatisticsServiceImpl statisticsServiceImpl) {
         this.url = urlNext;
         this.siteEntity = siteEntity;
         this.fjp = fjp;
@@ -53,12 +54,13 @@ public class ParseSite extends RecursiveAction {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
         this.lemmaFinderService = lemmaFinderService;
+        this.statisticsServiceImpl = statisticsServiceImpl;
     }
 
     @Override
     protected void compute() {
         //Проверяем разрешена ли индексация, и удволетворяет ли ссылка нашим требованиям
-        if (isStop) return;
+        if (!statisticsServiceImpl.getTotal().isIndexing()) return;
         if (!url.contains(siteEntity.getUrl()) || (url.contains("#") || (url.contains("&") || (url.contains("?"))))) {
             chekParsingFinish();
             return;
@@ -157,14 +159,6 @@ public class ParseSite extends RecursiveAction {
         }
     }
 
-    static void isStopParse() {
-        isStop = true;
-    }
-
-    static void isStartParse() {
-        isStop = false;
-    }
-
     private void chekParsingFinish() {
         if (fjp.getQueuedTaskCount() == 0) {
             siteEntity.setSiteStatus(SiteStatus.INDEXED);
@@ -190,7 +184,7 @@ public class ParseSite extends RecursiveAction {
             String urlNext = element.absUrl("href");
             urlNext = urlNext.replaceFirst("www\\.", "").strip();
             new ParseSite(urlNext, siteEntity, fjp, siteRepository, pageRepository,
-                    lemmaRepository, indexRepository, lemmaFinderService).fork();
+                    lemmaRepository, indexRepository, lemmaFinderService, statisticsServiceImpl).fork();
         }
     }
 

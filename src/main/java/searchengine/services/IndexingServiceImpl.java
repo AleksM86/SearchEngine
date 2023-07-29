@@ -32,6 +32,8 @@ public class IndexingServiceImpl implements IndexingService {
     @Autowired
     private IndexRepository indexRepository;
     @Autowired
+    private StatisticsServiceImpl statisticsServiceImpl;
+    @Autowired
     private LemmaFinderService lemmaFinderService;
     private boolean isIndexing;
     private final SitesList sites;
@@ -56,13 +58,11 @@ public class IndexingServiceImpl implements IndexingService {
             return indexingResponse;
         }
         isIndexing = true;
-
         //Очищаем базу данных
         clearAllTables();
-
         //Отправляем список сайтов на индексацию
         indexing(sites.getSites());
-        if (!StatisticsServiceImpl.getTotal().isIndexing()) {
+        if (!statisticsServiceImpl.getTotal().isIndexing()) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Указанные сайты не доступны");
         }
@@ -71,7 +71,6 @@ public class IndexingServiceImpl implements IndexingService {
     }
 
     private void indexing(List<Site> sites) {
-        ParseSite.isStartParse();
         //Для каждого сайта создаем сущность, записываем ее в таблицу и отправляем сайт на парсинг
         for (Site site : sites) {
             ForkJoinPool fjp = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
@@ -83,9 +82,9 @@ public class IndexingServiceImpl implements IndexingService {
                 Jsoup.connect(site.getUrl()).execute();
                 siteEntity.setSiteStatus(SiteStatus.INDEXING);
                 siteEntitySet.add(siteEntity);
-                StatisticsServiceImpl.getTotal().setIndexing(true);
+                statisticsServiceImpl.getTotal().setIndexing(true);
                 ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp, siteRepository,
-                        pageRepository, lemmaRepository, indexRepository, lemmaFinderService);
+                        pageRepository, lemmaRepository, indexRepository, lemmaFinderService, statisticsServiceImpl);
                 fjp.execute(parseSite);
             }
             catch (Exception e) {
@@ -98,7 +97,7 @@ public class IndexingServiceImpl implements IndexingService {
             siteRepository.save(siteEntity);
         }
         if (siteEntitySet.isEmpty()) {
-            StatisticsServiceImpl.getTotal().setIndexing(false);
+            statisticsServiceImpl.getTotal().setIndexing(false);
         }
     }
 
@@ -106,13 +105,12 @@ public class IndexingServiceImpl implements IndexingService {
         IndexingResponse indexingResponse = new IndexingResponse();
         if (isIndexing) {
             //Прекращаем прием задач в пул потоков
-            ParseSite.isStopParse();
             for (SiteEntity siteEntity : siteEntitySet) {
                 siteEntity.setSiteStatus(SiteStatus.INDEXED);
                 siteEntity.setLastError("Индексация отстановленна пользователем");
                 siteRepository.save(siteEntity);
             }
-            StatisticsServiceImpl.getTotal().setIndexing(false);
+            statisticsServiceImpl.getTotal().setIndexing(false);
             indexingResponse.setResult(true);
             siteEntitySet.clear();
             return indexingResponse;
