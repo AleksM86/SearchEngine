@@ -73,7 +73,7 @@ public class IndexingServiceImpl implements IndexingService {
             try {
                 Jsoup.connect(site.getUrl()).execute();
                 siteEntity.setSiteStatus(SiteStatus.INDEXING);
-                siteEntitySet.add(siteEntity);
+               siteEntitySet.add(siteEntity);
                 ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp, siteRepository,
                         pageRepository, lemmaRepository, indexRepository, lemmaFinderService);
                 fjp.execute(parseSite);
@@ -138,32 +138,26 @@ public class IndexingServiceImpl implements IndexingService {
         indexingResponse.setResult(false);
         indexingResponse.setError("Данная страница сайтов находится за пределами сайтов, указанных в конфигурационном файле");
         String urlParam = siteParam.getUrl().replaceFirst("www\\.", "").strip();
-
         //Проверяем соответствует ли указанный адрес страницы сайтам из конфигурационного файла
         String path = chekUrlInApplication(urlParam);
-        if (path.equals("")) return indexingResponse;
-
+        if (!indexingResponse.getResult()) return indexingResponse;
         List<PageEntity> pageEntityList = pageRepository.findPageEntityListByPathIdAndSiteUrl(path, site.getUrl());
-
         //Проверяем есть ли страница в базе данных. Если есть удаляем ее индексы,
         //далее создаем новую сущность страницы
         if (!(pageEntityList.isEmpty())) {
             deletePageFromTables(pageEntityList.get(0));
         }
         PageEntity pageEntity = createPageEntity(path, urlParam);
-        SiteEntity siteEntity = pageEntity.getSiteEntity();
         if (pageEntity == null) {
             indexingResponse.setResult(false);
-            indexingResponse.setError("Страница сайта была недоступна");
+            indexingResponse.setError("Страница сайта была недоступна или отсутствует");
             return indexingResponse;
         }
+        SiteEntity siteEntity = pageEntity.getSiteEntity();
         //Отправляем страницу на индексацию
-
         ParseSite parseSite = new ParseSite(siteEntity, siteRepository, pageRepository, lemmaRepository,
                 indexRepository, lemmaFinderService);
         parseSite.addToPageTable(pageEntity);
-        siteEntity.setSiteStatus(SiteStatus.INDEXED);
-        siteRepository.save(siteEntity);
         return indexingResponse;
     }
     private void deletePageFromTables(PageEntity pageEntity) {
