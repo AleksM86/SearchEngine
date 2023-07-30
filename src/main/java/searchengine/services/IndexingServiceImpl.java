@@ -32,10 +32,9 @@ public class IndexingServiceImpl implements IndexingService {
     @Autowired
     private IndexRepository indexRepository;
     @Autowired
-    private StatisticsServiceImpl statisticsServiceImpl;
-    @Autowired
     private LemmaFinderService lemmaFinderService;
-    private boolean isIndexing;
+    @Autowired
+    private StatisticsServiceImpl statisticsServiceImpl;
     private final SitesList sites;
     private Set<SiteEntity> siteEntitySet = new HashSet<>();
     private Site site;
@@ -51,22 +50,15 @@ public class IndexingServiceImpl implements IndexingService {
     @Override
     public IndexingResponse startIndexing() {
         indexingResponse = new IndexingResponse();
-        isIndexing = checkIsIndexing();
-        if (isIndexing) {
+        if (checkIsIndexing()) {
             indexingResponse.setResult(false);
             indexingResponse.setError("Индексация уже запущенна");
             return indexingResponse;
         }
-        isIndexing = true;
         //Очищаем базу данных
         clearAllTables();
         //Отправляем список сайтов на индексацию
         indexing(sites.getSites());
-        if (!statisticsServiceImpl.getTotal().isIndexing()) {
-            indexingResponse.setResult(false);
-            indexingResponse.setError("Указанные сайты не доступны");
-        }
-        indexingResponse.setResult(true);
         return indexingResponse;
     }
 
@@ -82,9 +74,8 @@ public class IndexingServiceImpl implements IndexingService {
                 Jsoup.connect(site.getUrl()).execute();
                 siteEntity.setSiteStatus(SiteStatus.INDEXING);
                 siteEntitySet.add(siteEntity);
-                statisticsServiceImpl.getTotal().setIndexing(true);
                 ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp, siteRepository,
-                        pageRepository, lemmaRepository, indexRepository, lemmaFinderService, statisticsServiceImpl);
+                        pageRepository, lemmaRepository, indexRepository, lemmaFinderService);
                 fjp.execute(parseSite);
             }
             catch (Exception e) {
@@ -97,20 +88,23 @@ public class IndexingServiceImpl implements IndexingService {
             siteRepository.save(siteEntity);
         }
         if (siteEntitySet.isEmpty()) {
-            statisticsServiceImpl.getTotal().setIndexing(false);
+            indexingResponse.setResult(false);
+            indexingResponse.setError("Указанные сайты не доступны");
+        } else {
+            indexingResponse.setResult(true);
         }
+        statisticsServiceImpl.getStatistics();
     }
-
+    @Override
     public IndexingResponse stopIndexing() {
         IndexingResponse indexingResponse = new IndexingResponse();
-        if (isIndexing) {
+        if (checkIsIndexing()) {
             //Прекращаем прием задач в пул потоков
             for (SiteEntity siteEntity : siteEntitySet) {
                 siteEntity.setSiteStatus(SiteStatus.INDEXED);
                 siteEntity.setLastError("Индексация отстановленна пользователем");
                 siteRepository.save(siteEntity);
             }
-            statisticsServiceImpl.getTotal().setIndexing(false);
             indexingResponse.setResult(true);
             siteEntitySet.clear();
             return indexingResponse;

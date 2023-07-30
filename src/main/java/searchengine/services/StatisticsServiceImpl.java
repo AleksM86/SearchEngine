@@ -1,15 +1,10 @@
 package searchengine.services;
 
 import lombok.Data;
-import lombok.Getter;
 import lombok.RequiredArgsConstructor;
-import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import searchengine.dto.statistics.DetailedStatisticsItem;
-import searchengine.dto.statistics.StatisticsData;
-import searchengine.dto.statistics.StatisticsResponse;
-import searchengine.dto.statistics.TotalStatistics;
+import searchengine.dto.statistics.*;
 import searchengine.model.PageEntity;
 import searchengine.model.SiteEntity;
 import searchengine.repository.IndexRepository;
@@ -29,7 +24,7 @@ public class StatisticsServiceImpl implements StatisticsService {
     @Autowired
     private IndexRepository indexRepository;
     private TotalStatistics total = new TotalStatistics();
-    private  List<DetailedStatisticsItem> detailed = new ArrayList<>();
+    private List<DetailedStatisticsItem> detailed = new ArrayList<>();
     private StatisticsResponse response = new StatisticsResponse();
     private StatisticsData data = new StatisticsData();
 
@@ -38,8 +33,9 @@ public class StatisticsServiceImpl implements StatisticsService {
         detailed.clear();
         List<SiteEntity> siteEntityList = siteRepository.findAll();
         total.setSites(siteEntityList.size());
+        total.setIndexing(checkIsIndexing());
         data.setTotal(total);
-        for (SiteEntity siteEntity : siteEntityList){
+        for (SiteEntity siteEntity : siteEntityList) {
             createDetailedStatisticsItem(siteEntity);
         }
         total.setPages(foundPageTotalCount());
@@ -48,21 +44,24 @@ public class StatisticsServiceImpl implements StatisticsService {
         response.setStatistics(data);
         return response;
     }
-    private int foundPageTotalCount(){
+
+    private int foundPageTotalCount() {
         int totalPageCount = 0;
-        for (DetailedStatisticsItem item : detailed){
+        for (DetailedStatisticsItem item : detailed) {
             totalPageCount = totalPageCount + item.getPages();
         }
         return totalPageCount;
     }
-    private int foundLemmaTotalCount(){
+
+    private int foundLemmaTotalCount() {
         int totalLemmaCount = 0;
-        for (DetailedStatisticsItem item : detailed){
+        for (DetailedStatisticsItem item : detailed) {
             totalLemmaCount = totalLemmaCount + item.getLemmas();
         }
         return totalLemmaCount;
     }
-    private void createDetailedStatisticsItem(SiteEntity siteEntity){
+
+    private void createDetailedStatisticsItem(SiteEntity siteEntity) {
         DetailedStatisticsItem detailedStatisticsItem = new DetailedStatisticsItem();
         detailedStatisticsItem.setStatus(siteEntity.getSiteStatus().toString());
         detailedStatisticsItem.setUrl(siteEntity.getUrl());
@@ -79,5 +78,18 @@ public class StatisticsServiceImpl implements StatisticsService {
         int lemmaCount = indexRepository.findCountIndexBySiteId(siteEntity.getId());
         detailedStatisticsItem.setLemmas(lemmaCount);
         detailed.add(detailedStatisticsItem);
+    }
+
+    private boolean checkIsIndexing() {
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        if (siteEntityList.isEmpty()) {
+            return false;
+        }
+        for (SiteEntity siteEntity : siteEntityList) {
+            if (siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

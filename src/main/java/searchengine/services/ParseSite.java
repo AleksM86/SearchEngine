@@ -26,11 +26,9 @@ public class ParseSite extends RecursiveAction {
     private LemmaRepository lemmaRepository;
     private IndexRepository indexRepository;
     private LemmaFinderService lemmaFinderService;
-    private StatisticsServiceImpl statisticsServiceImpl;
     private String url;
     private SiteEntity siteEntity;
     private ForkJoinPool fjp;
-    private static volatile Boolean isStop;
 
     public ParseSite(SiteEntity siteEntity, SiteRepository siteRepository,
                      PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository,
@@ -45,7 +43,7 @@ public class ParseSite extends RecursiveAction {
 
     public ParseSite(String urlNext, SiteEntity siteEntity, ForkJoinPool fjp, SiteRepository siteRepository,
                      PageRepository pageRepository, LemmaRepository lemmaRepository, IndexRepository indexRepository,
-                     LemmaFinderService lemmaFinderService, StatisticsServiceImpl statisticsServiceImpl) {
+                     LemmaFinderService lemmaFinderService) {
         this.url = urlNext;
         this.siteEntity = siteEntity;
         this.fjp = fjp;
@@ -54,13 +52,12 @@ public class ParseSite extends RecursiveAction {
         this.lemmaRepository = lemmaRepository;
         this.indexRepository = indexRepository;
         this.lemmaFinderService = lemmaFinderService;
-        this.statisticsServiceImpl = statisticsServiceImpl;
     }
 
     @Override
     protected void compute() {
         //Проверяем разрешена ли индексация, и удволетворяет ли ссылка нашим требованиям
-        if (!statisticsServiceImpl.getTotal().isIndexing()) return;
+        if (!checkIsIndexing()) return;
         if (!url.contains(siteEntity.getUrl()) || (url.contains("#") || (url.contains("&") || (url.contains("?"))))) {
             chekParsingFinish();
             return;
@@ -96,7 +93,6 @@ public class ParseSite extends RecursiveAction {
     protected boolean addToPageTable(PageEntity pageEntity) {
         //Проверка наличия страницы и добавление данных в таблицы синхронизировано по сайту, к которой принадлежит страница
         synchronized (siteEntity) {
-            siteEntity.setSiteStatus(SiteStatus.INDEXING);
             siteEntity.setStatusTime(LocalDateTime.now());
             siteRepository.save(siteEntity);
             if (!(pageEntity.getCode() == 200)) {
@@ -184,7 +180,7 @@ public class ParseSite extends RecursiveAction {
             String urlNext = element.absUrl("href");
             urlNext = urlNext.replaceFirst("www\\.", "").strip();
             new ParseSite(urlNext, siteEntity, fjp, siteRepository, pageRepository,
-                    lemmaRepository, indexRepository, lemmaFinderService, statisticsServiceImpl).fork();
+                    lemmaRepository, indexRepository, lemmaFinderService).fork();
         }
     }
 
@@ -197,6 +193,18 @@ public class ParseSite extends RecursiveAction {
             createParseSiteAndFork(document);
             chekParsingFinish();
             return true;
+        }
+        return false;
+    }
+    private boolean checkIsIndexing(){
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        if (siteEntityList.isEmpty()){
+            return false;
+        }
+        for (SiteEntity siteEntity : siteEntityList){
+            if (siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)){
+                return true;
+            }
         }
         return false;
     }
