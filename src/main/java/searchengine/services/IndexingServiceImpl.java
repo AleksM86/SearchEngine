@@ -16,6 +16,7 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -73,12 +74,12 @@ public class IndexingServiceImpl implements IndexingService {
             try {
                 Jsoup.connect(site.getUrl()).execute();
                 siteEntity.setSiteStatus(SiteStatus.INDEXING);
-               siteEntitySet.add(siteEntity);
+                siteRepository.save(siteEntity);
+                siteEntitySet.add(siteEntity);
                 ParseSite parseSite = new ParseSite(site.getUrl(), siteEntity, fjp, siteRepository,
                         pageRepository, lemmaRepository, indexRepository, lemmaFinderService);
                 fjp.execute(parseSite);
-            }
-            catch (Exception e) {
+            } catch (Exception e) {
                 siteEntity.setSiteStatus(SiteStatus.FAILED);
                 siteEntity.setLastError("Сайт не доступен");
                 siteRepository.save(siteEntity);
@@ -95,6 +96,7 @@ public class IndexingServiceImpl implements IndexingService {
         }
         statisticsServiceImpl.getStatistics();
     }
+
     @Override
     public IndexingResponse stopIndexing() {
         IndexingResponse indexingResponse = new IndexingResponse();
@@ -114,24 +116,26 @@ public class IndexingServiceImpl implements IndexingService {
         return indexingResponse;
     }
 
-    private void clearAllTables(){
+    private void clearAllTables() {
         indexRepository.deleteAllInBatch();
         lemmaRepository.deleteAllInBatch();
         pageRepository.deleteAllInBatch();
         siteRepository.deleteAllInBatch();
     }
-    private boolean checkIsIndexing(){
+
+    private boolean checkIsIndexing() {
         List<SiteEntity> siteEntityList = siteRepository.findAll();
-        if (siteEntityList.isEmpty()){
+        if (siteEntityList.isEmpty()) {
             return false;
         }
-        for (SiteEntity siteEntity : siteEntityList){
-            if (siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)){
+        for (SiteEntity siteEntity : siteEntityList) {
+            if (siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)) {
                 return true;
             }
         }
         return false;
     }
+
     @Override
     public IndexingResponse indexPage(Site siteParam) {
         indexingResponse = new IndexingResponse();
@@ -160,11 +164,13 @@ public class IndexingServiceImpl implements IndexingService {
         parseSite.addToPageTable(pageEntity);
         return indexingResponse;
     }
+
     private void deletePageFromTables(PageEntity pageEntity) {
         //Удаляем данные из баззы данных, связанные с этой страницей
         List<IndexEntity> indexEntityListForDelete = indexRepository.findByPageEntity(pageEntity.getId());
         indexRepository.deleteAll(indexEntityListForDelete);
     }
+
     private PageEntity createPageEntity(String path, String urlParam) {
         List<SiteEntity> siteEntityList = siteRepository.findByUrl(site.getUrl());
         SiteEntity siteEntity = null;
@@ -196,6 +202,7 @@ public class IndexingServiceImpl implements IndexingService {
         }
         return pageEntity;
     }
+
     private String chekUrlInApplication(String urlParam) {
         String path = "";
         for (Site site : sites.getSites()) {
