@@ -93,8 +93,13 @@ public class ParseSite extends RecursiveAction {
     protected boolean addToPageTable(PageEntity pageEntity) {
         //Проверка наличия страницы и добавление данных в таблицы синхронизировано по сайту, к которой принадлежит страница
         synchronized (siteEntity) {
-            siteEntity.setStatusTime(LocalDateTime.now());
-            siteRepository.save(siteEntity);
+            List<SiteEntity> siteEntityList = siteRepository.findAll();
+            for (SiteEntity siteEntity: siteEntityList){
+                if (siteEntity.getName().equals(this.siteEntity.getName()) && siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)){
+                    siteEntity.setStatusTime(LocalDateTime.now());
+                    siteRepository.save(siteEntity);
+                }
+            }
             if (!(pageEntity.getCode() == 200)) {
                 return false;
             }
@@ -109,7 +114,7 @@ public class ParseSite extends RecursiveAction {
     }
 
     private void addToLemmaTable(PageEntity pageEntity) {
-        Map<String, Integer> lemmas = lemmaFinderService.collectLemmas(pageEntity.getContent());
+        Map<String, Integer> lemmas = lemmaFinderService.collectLemmas(Jsoup.parse(pageEntity.getContent()).text());
         List<LemmaEntity> lemmaEntityListForSave = new ArrayList<>();
         List<LemmaEntity> lemmaEntityListForUpdate = new ArrayList<>();
         for (String lemma : lemmas.keySet()) {
@@ -157,14 +162,24 @@ public class ParseSite extends RecursiveAction {
 
     private void chekParsingFinish() {
         if (fjp.getQueuedTaskCount() == 0) {
-            siteEntity.setSiteStatus(SiteStatus.INDEXED);
-            siteRepository.save(siteEntity);
+            List<SiteEntity> siteEntityList = siteRepository.findAll();
+            for (SiteEntity siteEntity: siteEntityList){
+                if (siteEntity.getName().equals(this.siteEntity.getName()) && siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)){
+                    siteEntity.setSiteStatus(SiteStatus.INDEXED);
+                    siteRepository.save(siteEntity);
+                }
+            }
         }
     }
 
     private void errorParsing() {
-        siteEntity.setLastError("Страница сайта была недоступна");
-        siteRepository.save(siteEntity);
+        List<SiteEntity> siteEntityList = siteRepository.findAll();
+        for (SiteEntity siteEntity: siteEntityList){
+            if (siteEntity.getName().equals(this.siteEntity.getName()) && siteEntity.getSiteStatus().equals(SiteStatus.INDEXING)){
+                siteEntity.setLastError("Страница сайта была недоступна");
+                siteRepository.save(siteEntity);
+            }
+        }
     }
 
     private void sleeping(int milliSecond) {

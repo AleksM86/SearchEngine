@@ -16,7 +16,6 @@ import searchengine.repository.IndexRepository;
 import searchengine.repository.LemmaRepository;
 import searchengine.repository.PageRepository;
 import searchengine.repository.SiteRepository;
-
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -37,7 +36,6 @@ public class IndexingServiceImpl implements IndexingService {
     @Autowired
     private StatisticsServiceImpl statisticsServiceImpl;
     private final SitesList sites;
-    private Set<SiteEntity> siteEntitySet = new HashSet<>();
     private Site site;
     private IndexingResponse indexingResponse;
 
@@ -65,6 +63,7 @@ public class IndexingServiceImpl implements IndexingService {
 
     private void indexing(List<Site> sites) {
         //Для каждого сайта создаем сущность, записываем ее в таблицу и отправляем сайт на парсинг
+        Set<SiteEntity> siteEntitySet = new HashSet<>();
         for (Site site : sites) {
             ForkJoinPool fjp = new ForkJoinPool(Runtime.getRuntime().availableProcessors());
             SiteEntity siteEntity = new SiteEntity();
@@ -94,7 +93,6 @@ public class IndexingServiceImpl implements IndexingService {
         } else {
             indexingResponse.setResult(true);
         }
-        statisticsServiceImpl.getStatistics();
     }
 
     @Override
@@ -102,13 +100,12 @@ public class IndexingServiceImpl implements IndexingService {
         IndexingResponse indexingResponse = new IndexingResponse();
         if (checkIsIndexing()) {
             //Прекращаем прием задач в пул потоков
-            for (SiteEntity siteEntity : siteEntitySet) {
+            for (SiteEntity siteEntity : siteRepository.findAll()) {
                 siteEntity.setSiteStatus(SiteStatus.INDEXED);
                 siteEntity.setLastError("Индексация отстановленна пользователем");
                 siteRepository.save(siteEntity);
             }
             indexingResponse.setResult(true);
-            siteEntitySet.clear();
             return indexingResponse;
         }
         indexingResponse.setResult(false);

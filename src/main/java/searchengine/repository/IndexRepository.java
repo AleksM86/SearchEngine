@@ -28,7 +28,7 @@ public interface IndexRepository extends JpaRepository<IndexEntity, Integer> {
             " join `page` on page_id = `page`.id  WHERE lemma = :lemma" +
             " AND path = :path AND page.site_id = :siteId",
             nativeQuery = true)
-    Integer findContentByLemmaIdAndPageId(@Param("lemma") String lemma, @Param("path") String path, @Param("siteId") int siteId);
+    Integer findRankByLemmaIdAndPathAndSiteId(@Param("lemma") String lemma, @Param("path") String path, @Param("siteId") int siteId);
 
     @Query(value = "SELECT * FROM `index` WHERE page_id = :pageId",
             nativeQuery = true)

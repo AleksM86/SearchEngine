@@ -102,8 +102,8 @@ public class SearchServiceImpl implements SearchService {
                continue;
             }
             int countSearchLemmas = indexRepository.findCountIndexByLemmaId(lemmaEntity.getId());
-            if ((double) countSearchLemmas / (double) countPages > 0.9) {
-                System.out.println(searchLemma + " встречается слишком часто - " +
+            if ((double) countSearchLemmas / (double) countPages > 0.8) {
+                System.out.println(searchLemma + " встречается слишком часто на сайте " + siteEntity.getName() + " - " +
                         (double) countSearchLemmas / (double) countPages);
                continue;
             }
